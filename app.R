@@ -6,19 +6,25 @@
 # Platform: x86_64-w64-mingw32/x64 (64-bit)
 #-----------------------------------------------------------------
 # By: Chen Yang (chen_yang@link.cuhk.edu.hk)
+#     Mei Ziwei (zwmei@link.cuhk.edu.hk)
 # Date: 2019-05-20
-# Update: 2019-07-03
+# Update: 2019-07-03 (by Chen Yang)
+# Update: 2021-06-01 (by Mei Ziwei)
 #=================================================================
+# rm(list = ls())
+# 
 
 library(shiny)
+library(ggplot2)
 library(tseries)
 library(expm)
 library(xts)
+library(reshape2)
 
 source("BoostedHP.R")
 source("plot_all.R")
 
-load("data/IRE.rda")
+# load("data/IRE.rda")
 
 # User interface ----
 
@@ -44,7 +50,7 @@ ui <- fluidPage(
       tags$hr(),
       
       # Input: Checkbox if file has header ----
-      checkboxInput("header", "Header", TRUE),
+      checkboxInput("header", "Header", FALSE),
       
       # Input: Select separator ----
       radioButtons("sep", "Separator",
@@ -73,16 +79,17 @@ ui <- fluidPage(
       # Download Button
       
       h2("Downloading Files "),
-      downloadButton("downloadData", "Download"),
+      downloadButton("downloadtable", "Download"),
       helpText("Download Files After the Boosted HP Filter in the default 'Download Document' in your computer."),
       
       # Horizontal line ----
       tags$hr(),
-      img(src = "shiny from rstudio.png", height = 70, width = 100),
+      h2("About"),
+      # img(src = "shiny from rstudio.png", height = 70, width = 100),
       br(),
       span("Shiny", style = "color:blue"),
-      " is a product of RStudio", 
-      helpText("Create user friendly app through 'Shiny'."),
+      " is a product of RStudio to create user friendly apps.\n\n", 
+      # helpText("Create user friendly app through 'Shiny'."),
       p("For more information of the APP, visit the Boosted_HP_App",
         a(" Github Repository.", 
           href = "https://github.com/chenyang45/Boosted_HP_App"))
@@ -114,13 +121,22 @@ ui <- fluidPage(
       numericInput("lambda", label = "Set the lambda for HP filter",value = 1600),
 
       selectInput("testtype", 
-                  label = "Choose the test type to display",
+                  label = "Choose you preferred type to of iteration",
+            
                   choices = list("nonstop", 
                                  "bHP-ADF",
                                  "bHP-BIC"),
                   selected = "bHP-BIC"),
       
-      numericInput("maxnum", label = "Maximum Iterated Number",value = 100),
+      selectInput("p_value", 
+                  label = "Significance level (for bHP-ADF only)",
+                  
+                  choices = list("0.01", 
+                                 "0.05",
+                                 "0.1"),
+                  selected = "0.05"),
+      
+      numericInput("maxnum", label = "Maximum Iterated Number (Set as 1 to run simple HP filter without iteration)",value = 100),
       
       #),
       
@@ -139,25 +155,37 @@ ui <- fluidPage(
       # Horizontal line ----
       tags$hr(),
       h2("Plot"),
-      selectInput("Type", 
-                  label = "Choose the Type of Plot",
-                  choices = list("Time Series", 
-                                 "Plain",
-                                 "SVG",
-                                 "GGPlot",
-                                 "Dynamic"),
-                  selected = "Time Series"),
+      # selectInput("Type", 
+      #             label = "Choose the Type of Plot",
+      #             choices = list("Time Series", 
+      #                            "Plain",
+      #                            "SVG",
+      #                            "GGPlot",
+      #                            "Dynamic"),
+      #             selected = "Time Series"),
+      selectInput("Frequency", 
+                  label = "Choose the frequency of data",
+                  choices = list("Daily" = "day", 
+                                 "Weakly" = "week", 
+                                 "Monthly" = "month",
+                                 "Quarterly" = "quarter",
+                                 "Yearly" = "year",
+                                 "Not Available" = NULL
+                                 ),
+                  selected = "Quarterly"),
       dateInput("date", 
-                h3("End Date of Input Data (valid only for ts plot)"), 
-                value = "2014-01-01"),
+                label = "Beginning Date of Input Data", 
+                value = "1900-01-01"),
       
       #plotOutput("Boostedplot"),
       tags$hr(),
       # Output: Tabset w/ plot, summary, and table ----
       tabsetPanel(type = "tabs",
                   tabPanel("Input Data", tableOutput("contents")),
-                  tabPanel("Plot", plotOutput("Boostedplot")),
                   tabPanel("Summary", verbatimTextOutput("summary")),
+                  tabPanel("Plot Trend", plotOutput("Trendplot")),
+                  tabPanel("Plot Cycle", plotOutput("Cycleplot")),
+                  tabPanel("Iteration History", plotOutput("Iterationplot")),
                   tabPanel("Results Table", tableOutput("table")))
       
       
@@ -173,23 +201,23 @@ ui <- fluidPage(
 
 
 
-
 # Define server logic to read selected file ----
 server <- function(input, output, session) {
   
   #req(input$file1)
   
   
-  
-  output$Boostedplot <- renderPlot({
+  myresults <- reactive({
     
-    req(input$file1)
+    # req(input$file1)
     rawdata <- read.csv(input$file1$datapath,
                         header = input$header,
                         sep = input$sep,
-                        quote = input$quote)
+                        quote = input$quote)[,1]
     
-    arg <- rawdata
+    arg <- list()
+    
+    arg$x <- rawdata
     
     arg$lambda <- input$lambda
     
@@ -202,14 +230,7 @@ server <- function(input, output, session) {
     
     arg$Max_Iter <- input$maxnum
     
-    bt_results <- do.call(BoostedHP, args)
-    #function(rawdata, trend, p_history, plot_type){
-    Boostedplot(rawdata, bt_results[[2]], bt_results[[4]], input$Type )
-    
-    
-    
-    
-    
+    do.call(BoostedHP, arg)
   })
   
   # Generate a summary of the dataset ----
@@ -242,10 +263,60 @@ server <- function(input, output, session) {
     paste("The current time is", Sys.time())
   })
   
-  output$table <- renderTable({
-    bt_results <- do.call(BoostedHP, args)
-    summary(bt_results[[2]])
+  
+  output$Trendplot <- renderPlot({
     
+    bt_results <- myresults()
+    #function(rawdata, trend, p_history, plot_type){
+    Boostedplot(bt_results, "trend", input$date, input$Frequency)
+    
+    
+  })
+  
+  
+  output$Cycleplot <- renderPlot({
+    
+    
+    bt_results <- myresults()
+    # bt_results <- do.call(BoostedHP, arg)
+    #function(rawdata, trend, p_history, plot_type){
+    Boostedplot(bt_results, "cycle", input$date, input$Frequency)
+    
+    
+  })
+  
+  
+  output$Iterationplot <- renderPlot({
+    # bt_results <- do.call(BoostedHP, arg)
+    bt_results <- myresults()
+    Boostedplot(bt_results, "history")
+  })
+  
+  datasetoutput <- reactive({
+    # bt_results <- do.call(BoostedHP, arg)
+    bt_results <- myresults()
+    out <- list()
+    if (is.null(input$Frequency) || is.null(input$date) ){
+      Date_series = 1:length(bt_results$cycle)
+    }else{
+      Date_series = seq(from = input$date, 
+                        length.out = length(bt_results$cycle), 
+                        by = input$Frequency)
+    }
+    
+    out$date <- Date_series
+    out$cycle <- bt_results$cycle
+    out$trend <- bt_results$trend 
+    out$trend_history <- bt_results$trend_hist
+    out <- as.data.frame(out)
+    out$date <- as.character(Date_series)
+    out 
+  })
+  
+  
+  output$table <- renderTable({
+    datasetoutput()
+    # summary(bt_results[[2]])
   }
   
   )
@@ -277,6 +348,17 @@ server <- function(input, output, session) {
       }
     )
     
+    output$downloadtable <- downloadHandler(
+      filename = function() {
+        "BoostedHP_Result.csv"
+      },
+      content = function(file) {
+        write.csv(datasetoutput(), file, row.names = FALSE)
+      }
+    )
+    
+    
+    
     if(input$disp == "head") {
       return(head(df))
     }
@@ -285,6 +367,7 @@ server <- function(input, output, session) {
     }
     
   })
+  
   
 }
 

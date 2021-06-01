@@ -174,8 +174,8 @@ BoostedHP = function(x, lambda = 1600, iter= TRUE, test_type = "none", sig_p = 0
         r <- r + 1
       } # end the while loop
 
-      if( r > Max_Iter ){
-        R <- Max_Iter
+      if( r > Max_Iter){
+        R <- Max_Iter 
         warning("The number of iterations exceeds the limit.
                 The residual cycle remains non-stationary.")
       }
@@ -188,8 +188,8 @@ BoostedHP = function(x, lambda = 1600, iter= TRUE, test_type = "none", sig_p = 0
         # assignment
         r <- 0
         x_c_r <- x
-        x_f <- matrix(0, n, Max_Iter)
-        IC <- rep(0, Max_Iter)
+        x_f <- matrix(0, n, Max_Iter + 1)
+        IC <- rep(0, Max_Iter + 1)
         IC_decrease = TRUE
 
 
@@ -198,7 +198,7 @@ BoostedHP = function(x, lambda = 1600, iter= TRUE, test_type = "none", sig_p = 0
         I_S_r = I_S_0
 
 
-        while( r < Max_Iter ) {
+        while( r < Max_Iter + 1) {
           r <- r + 1
 
           x_c_r = I_S_r %*% x  # this is the cyclical component after m iterations
@@ -217,14 +217,15 @@ BoostedHP = function(x, lambda = 1600, iter= TRUE, test_type = "none", sig_p = 0
         # the message
 
 
-
+  
         # final assignment
         R = r - 1;
         x_f <- as.matrix(x_f[, 1:R])
         x_c <- x - x_f[,R]
+
         # browser()
 
-        result <- list( cycle = x_c, trend_hist = x_f,  test_type = test_type,
+        result <- list( cycle = x_c, trend_hist = x_f[, 1:R],  test_type = test_type,
                         IC_hist = IC, iter_num = R, trend =  x- x_c  )
       }
 
