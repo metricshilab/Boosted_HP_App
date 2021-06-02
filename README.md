@@ -14,14 +14,3 @@ update: 2021-06-01
 This is an accompanying APP for the paper:
 
 Phillips, Peter CB, and Zhentao Shi. "Boosting: Why you can use the HP filter." *International Economic Review* (2019).
-
-## Memo
-
-Update the bundle via:
-
-```
-rsconnect::deployApp('D:\\mzw\\github_repo\\Boosted_HP_App')
-
-```
-
-
