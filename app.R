@@ -92,7 +92,7 @@ ui <- fluidPage(
       # helpText("Create user friendly app through 'Shiny'."),
       p("For more information of the APP, visit the Boosted_HP_App",
         a(" Github Repository.", 
-          href = "https://github.com/chenyang45/Boosted_HP_App"))
+          href = "https://github.com/metricshilab/Boosted_HP_App"))
       
       
       
