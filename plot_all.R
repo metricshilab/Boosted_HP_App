@@ -35,7 +35,7 @@ Boostedplot <- function(bt_results, plot_type,
   }
   
   
-  if (is.null(Frequency) || is.null(Date) ){
+  if (Frequency == "none" || is.null(Frequency) || is.null(Date) ){
     Date_series = 1:length(cycle)
   }else{
     Date_series = seq(from = Date, length.out = length(cycle), by = Frequency)

@@ -165,16 +165,16 @@ ui <- fluidPage(
       #             selected = "Time Series"),
       selectInput("Frequency", 
                   label = "Choose the frequency of data",
-                  choices = list("Daily" = "day", 
+                  choices = list("Not Available" = "none", 
+                                 "Daily" = "day", 
                                  "Weakly" = "week", 
                                  "Monthly" = "month",
                                  "Quarterly" = "quarter",
-                                 "Yearly" = "year",
-                                 "Not Available" = NULL
+                                 "Yearly" = "year"
                                  ),
                   selected = "Quarterly"),
       dateInput("date", 
-                label = "Beginning Date of Input Data", 
+                label = "Beginning Date of Input Data (Set as default if not available)", 
                 value = "1900-01-01"),
       
       #plotOutput("Boostedplot"),
